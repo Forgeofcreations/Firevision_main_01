@@ -1,353 +1,350 @@
 # 🔥 FireVision Pro
+### AI-Powered Real-Time Fire and Smoke Detection System
 
-> **AI-powered real-time fire & smoke detection platform** — PyQt5 desktop client + FastAPI backend + YOLOv8/ONNX inference engine.
+FireVision Pro is an AI-powered fire and smoke detection platform designed to monitor CCTV camera feeds in real time. It uses a YOLOv8-based deep learning model with ONNX Runtime to identify fire and smoke from video streams and generate alerts when potential fire incidents are detected.
 
----
+The system provides a desktop monitoring interface, centralized backend services, alert management, and a geographical map interface to visualize camera locations and detected fire incidents.
 
-## Table of Contents
+## 1. Overview
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Backend Setup](#backend-setup)
-  - [Frontend (Desktop Client) Setup](#frontend-desktop-client-setup)
-- [Environment Variables](#environment-variables)
-- [Database Migrations (Alembic)](#database-migrations-alembic)
-- [Docker Deployment](#docker-deployment)
-- [API Reference](#api-reference)
-- [AI / ONNX Inference](#ai--onnx-inference)
-- [Logging & Monitoring](#logging--monitoring)
-- [Security](#security)
-- [CI/CD](#cicd)
-- [Contributing](#contributing)
+FireVision Pro provides the following functionalities:
 
----
+- **Real-Time Fire Detection:** Detects fire and smoke from live CCTV camera streams.
+- **AI-Based Detection:** Uses YOLOv8 for object detection and ONNX Runtime for model inference.
+- **Live Camera Monitoring:** Displays camera feeds through a PyQt5 desktop application.
+- **Alert Management:** Generates and manages alerts when fire or smoke is detected.
+- **Camera Management:** Allows users to register, configure, and monitor cameras.
+- **Location Mapping:** Displays camera locations and detected fire incidents using Leaflet maps.
+- **User Authentication:** Provides secure login and role-based access.
+- **Centralized Database:** Stores camera details, user information, and fire detection alerts.
 
-## Overview
+## 2. System Architecture
 
-FireVision Pro is a production-grade fire and smoke detection system that combines:
-
-- **Real-time CCTV stream analysis** via an ONNX-accelerated YOLOv8 model
-- **A PyQt5 desktop application** for live viewing, alert management, and camera configuration
-- **A FastAPI REST backend** with JWT authentication, role-based access control, and MySQL persistence
-- **Structured loguru logging** with daily rotation, error tracing, and a dedicated security audit trail
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                  Desktop Client (PyQt5)                 │
-│                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐ │
-│  │  Login UI    │  │ Camera View  │  │ Alert Manager │ │
-│  │ (login_      │  │ (widgets.py) │  │ (alerts_      │ │
-│  │  dialog.py)  │  │              │  │  manager.py)  │ │
-│  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘ │
-│         │                 │                  │         │
-│         └────────────── REST API ────────────┘         │
-│                           │                            │
-│         ┌─────────────────▼──────────────────┐         │
-│         │   Multiprocess Camera Pipeline      │         │
-│         │   (app/camera/multiprocess_         │         │
-│         │    pipeline.py)                     │         │
-│         └─────────────────┬──────────────────┘         │
-│                           │ frames (Queue)              │
-│         ┌─────────────────▼──────────────────┐         │
-│         │   ONNX Detector (app/ai/            │         │
-│         │   onnx_detector.py)                 │         │
-│         └────────────────────────────────────┘         │
-└─────────────────────────────────────────────────────────┘
-                            │ HTTPS / REST
-┌───────────────────────────▼─────────────────────────────┐
-│                  FastAPI Backend                         │
-│                                                         │
-│  /api/auth    → JWT login + refresh token rotation      │
-│  /api/users   → RBAC user management                    │
-│  /api/cameras → Camera CRUD                             │
-│  /api/alerts  → Fire alert lifecycle management         │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  MySQL 8.0  (Alembic-managed schema)             │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+```text
+             CCTV CAMERA / VIDEO INPUT
+                       |
+                       v
+             FRAME CAPTURE MODULE
+                       |
+                       v
+              IMAGE PREPROCESSING
+                       |
+                       v
+             YOLOv8 / ONNX DETECTOR
+                       |
+                       v
+              FIRE & SMOKE DETECTION
+                       |
+              +--------+--------+
+              |                 |
+              v                 v
+         NO DETECTION       DETECTION
+              |                 |
+              v                 v
+        Continue Video      Generate Alert
+                                |
+                                v
+                         FASTAPI BACKEND
+                                |
+                 +--------------+--------------+
+                 |              |              |
+                 v              v              v
+            Alert Manager  Camera Manager  User Manager
+                 |              |              |
+                 +--------------+--------------+
+                                |
+                                v
+                           MYSQL DATABASE
+                                |
+                                v
+                     PYQT5 DESKTOP APPLICATION
+                                |
+                 +--------------+--------------+
+                 |              |              |
+                 v              v              v
+             Live View     Alert Dashboard   Map View
+                                              |
+                                              v
+                                       LEAFLET MAP
 ```
 
----
+## 3. Technology Stack
 
-## Tech Stack
-
-| Layer | Technology |
+| Component | Technology |
 |---|---|
-| Desktop Client | Python 3.11, PyQt5 |
-| AI Inference | YOLOv8 (Ultralytics), ONNX Runtime |
-| Backend API | FastAPI, Uvicorn |
-| Auth | JWT (python-jose), bcrypt (passlib) |
-| Database | MySQL 8.0, SQLAlchemy ORM, Alembic |
-| Logging | Loguru (structured, rotating, async) |
-| Rate Limiting | slowapi |
-| Containerisation | Docker, Docker Compose |
-| CI/CD | GitHub Actions |
+| Programming Language | Python |
+| Desktop Application | PyQt5 |
+| Backend Framework | FastAPI |
+| Deep Learning Model | YOLOv8 |
+| Model Inference | ONNX Runtime |
+| Computer Vision | OpenCV |
+| Database | MySQL |
+| ORM | SQLAlchemy |
+| Database Migration | Alembic |
+| Authentication | JWT |
+| Password Hashing | bcrypt |
+| Map Integration | Leaflet |
+| API Server | Uvicorn |
 
----
+## 4. Project Structure
 
-## Project Structure
-
-```
+```text
 firevision_sql/
-├── backend/                   # FastAPI REST API
-│   ├── core/
-│   │   ├── config.py          # Pydantic Settings (reads .env)
-│   │   ├── database.py        # SQLAlchemy engine + session
-│   │   ├── security.py        # JWT creation, bcrypt hashing
-│   │   └── logger.py          # Loguru configuration (NEW)
-│   ├── models/
-│   │   └── models.py          # SQLAlchemy ORM models + indexes
-│   ├── schemas/
-│   │   └── schemas.py         # Pydantic request/response schemas
-│   ├── routers/
-│   │   ├── auth.py            # Login + refresh token endpoints
-│   │   ├── users.py           # User CRUD + get_current_user dep
-│   │   ├── cameras.py         # Camera CRUD
-│   │   └── alerts.py          # Alert lifecycle
-│   ├── alembic/               # DB migration scripts
-│   ├── logs/                  # Runtime log files (auto-created)
-│   ├── main.py                # App factory, middleware, routes
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env                   # Secret config (NOT in git)
-│   └── .env.example           # Template for new installs
 │
-├── software/                  # PyQt5 Desktop Client
+├── backend/
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── security.py
+│   │   └── logger.py
+│   │
+│   ├── models/
+│   │   └── models.py
+│   │
+│   ├── schemas/
+│   │   └── schemas.py
+│   │
+│   ├── routers/
+│   │   ├── auth.py
+│   │   ├── users.py
+│   │   ├── cameras.py
+│   │   └── alerts.py
+│   │
+│   ├── main.py
+│   ├── requirements.txt
+│   └── .env.example
+│
+├── software/
 │   ├── app/
 │   │   ├── ai/
-│   │   │   ├── onnx_detector.py   # ONNX inference engine
-│   │   │   └── export_yolo.py     # YOLOv8 → ONNX export helper
+│   │   │   ├── onnx_detector.py
+│   │   │   └── export_yolo.py
+│   │   │
 │   │   ├── camera/
-│   │   │   └── multiprocess_pipeline.py  # GIL-free frame capture
+│   │   │   └── multiprocess_pipeline.py
+│   │   │
 │   │   ├── config/
-│   │   │   └── settings.py        # Client config loader
+│   │   │   └── settings.py
+│   │   │
 │   │   └── ui/
-│   │       ├── login_dialog.py    # Modern login UI
-│   │       ├── widgets.py         # Camera/alert widgets
+│   │       ├── login_dialog.py
+│   │       ├── widgets.py
 │   │       └── camera_location_manager.py
-│   ├── main.py                # Application entry point
+│   │
+│   ├── main.py
 │   └── requirements.txt
 │
-├── .github/
-│   └── workflows/
-│       └── ci.yml             # GitHub Actions CI pipeline
-├── docker-compose.yml         # Full-stack orchestration
-├── run_backend.bat            # Windows quick-start script
-└── run_software.bat           # Windows desktop launcher
+└── README.md
 ```
 
----
-
-## Quick Start
+## 5. Installation and Setup
 
 ### Prerequisites
 
-| Requirement | Version |
-|---|---|
-| Python | 3.11+ |
-| MySQL Server | 8.0+ |
-| Git | any |
-| Docker + Compose | optional (for containerised deploy) |
+Make sure the following software is installed:
 
----
+- Python 3.11 or later
+- MySQL Server 8.0 or later
+- Git
 
-### Backend Setup
+### Step 1: Clone the Repository
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/firevision_sql.git
+git clone <YOUR_GITHUB_REPOSITORY_URL>
 cd firevision_sql
-
-# 2. Create and activate a virtual environment
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux / macOS
-source .venv/bin/activate
-
-# 3. Install backend dependencies
-cd backend
-pip install -r requirements.txt
-
-
-Start the API server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at:  
-- **Swagger UI**: http://localhost:8000/api/docs  
-- **ReDoc**: http://localhost:8000/api/redoc  
-- **Health check**: http://localhost:8000/health  
+### Step 2: Backend Setup
 
----
-
-### Frontend (Desktop Client) Setup
+Create a virtual environment:
 
 ```bash
-# From the project root
-cd software
+python -m venv .venv
+```
 
-# Install dependencies
+Activate the environment on Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+Install backend dependencies:
+
+```bash
+cd backend
 pip install -r requirements.txt
+```
 
-# Ensure backend URL is configured in software/.env
-# BACKEND_URL=http://localhost:8000
+### Step 3: Configure Database
 
-# Launch the desktop app
+Create a MySQL database:
+
+```sql
+CREATE DATABASE firevision;
+```
+
+Configure the database connection and application settings in `backend/.env`.
+
+Example:
+
+```env
+DATABASE_URL=mysql+mysqlconnector://root:password@localhost:3306/firevision
+
+SECRET_KEY=your_secret_key
+REFRESH_TOKEN_SECRET_KEY=your_refresh_secret
+
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+```
+
+### Step 4: Start the Backend
+
+From the backend directory:
+
+```bash
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Backend API:
+
+- API Documentation: http://localhost:8000/api/docs
+- ReDoc: http://localhost:8000/api/redoc
+- Health Check: http://localhost:8000/health
+
+### Step 5: Desktop Application Setup
+
+Open another terminal:
+
+```bash
+cd software
+```
+
+Install the required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Configure the backend URL in the desktop application's configuration:
+
+```env
+BACKEND_URL=http://localhost:8000
+```
+
+Start the desktop application:
+
+```bash
 python main.py
 ```
 
-> **ONNX Acceleration**: If you have a custom `best_m.pt` YOLOv8 model, export it to ONNX before first run:
-> ```bash
-> python app/ai/export_yolo.py
-> ```
+## 6. AI-Based Fire and Smoke Detection
 
----
+FireVision Pro uses a YOLOv8-based deep learning model to identify fire and smoke in video frames.
 
-## Environment Variables
+### Detection Workflow
 
-Copy `backend/.env.example` to `backend/.env` and fill in all values before starting the backend.
+1. Capture frames from CCTV cameras or video sources.
+2. Preprocess the captured frames.
+3. Pass the frames to the YOLOv8 detection model.
+4. Perform inference using ONNX Runtime.
+5. Identify fire and smoke based on model predictions.
+6. Generate detection results and alerts.
+7. Display detection information in the desktop application.
 
-| Variable | Description | Default |
-|---|---|---|
-| `DATABASE_URL` | MySQL connection string | `mysql+mysqlconnector://root:@localhost:3306/firevision` |
-| `SECRET_KEY` | JWT access token signing secret | *(must change)* |
-| `REFRESH_TOKEN_SECRET_KEY` | JWT refresh token signing secret | *(must change)* |
-| `ALGORITHM` | JWT algorithm | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token TTL | `30` |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token TTL | `7` |
-| `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000,...` |
-| `RATE_LIMIT_LIMIT` | Global rate limit | `60/minute` |
+### ONNX Model Export
 
-> ⚠️ **Never commit your `.env` file.** It is listed in `.gitignore`.
+If you have a trained YOLOv8 model (`best_m.pt`), export it into ONNX format:
 
-Generate strong secrets with:
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
----
-
-
-```
-
----
-
-
-## API Reference
-
-Full interactive documentation is available at `/api/docs` (Swagger UI).
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/token` | Public | Login — returns access + refresh tokens |
-| `POST` | `/api/auth/refresh` | Public | Rotate refresh token |
-| `POST` | `/api/users/` | Public | Register a new user |
-| `GET` | `/api/users/me` | Bearer | Get current user profile |
-| `GET` | `/api/users/` | Bearer | List all users |
-| `DELETE` | `/api/users/{id}` | Admin | Delete a user |
-| `POST` | `/api/cameras/` | Bearer | Register a camera |
-| `GET` | `/api/cameras/` | Bearer | List cameras (admin sees all) |
-| `GET` | `/api/cameras/{id}` | Bearer | Get camera details |
-| `DELETE` | `/api/cameras/{id}` | Bearer/Admin | Delete a camera |
-| `POST` | `/api/alerts/` | Bearer | Create fire alert |
-| `GET` | `/api/alerts/` | Bearer | List alerts (filterable) |
-| `PATCH` | `/api/alerts/{id}` | Bearer | Update alert status |
-| `GET` | `/health` | Public | Health check |
-
----
-
-## AI / ONNX Inference
-
-FireVision uses **YOLOv8** for fire and smoke detection, exported to **ONNX** for hardware-agnostic, high-performance inference via `onnxruntime`.
-
-**Export your model:**
 ```bash
 python software/app/ai/export_yolo.py
-# Outputs: software/best_m.onnx
 ```
 
-**Runtime providers** (auto-selected in priority order):
-1. `TensorrtExecutionProvider` — NVIDIA TensorRT (best GPU performance)
-2. `CUDAExecutionProvider` — NVIDIA CUDA
-3. `CPUExecutionProvider` — CPU fallback (always available)
+The exported model is used by the ONNX detection engine.
 
-**Camera pipeline:**  
-Frames are captured in a separate `multiprocessing.Process` (bypassing Python's GIL) and delivered to the UI thread via a `multiprocessing.Queue`. This prevents detection latency from blocking the UI.
+### ONNX Execution Providers
 
----
+The inference engine can use the following execution providers, depending on availability:
 
-## Logging & Monitoring
+- CUDA Execution Provider – NVIDIA GPU acceleration.
+- CPU Execution Provider – CPU-based inference.
 
-All backend logs are written to `backend/logs/` (auto-created on startup).
+## 7. Camera Monitoring and Alert Management
 
-| Log File | Level | Rotation | Retention |
-|---|---|---|---|
-| `firevision_YYYY-MM-DD.log` | DEBUG+ | Daily at midnight | 30 days |
-| `errors_YYYY-MM-DD.log` | ERROR+ | 50 MB | 90 days |
-| `security_audit_YYYY-MM-DD.log` | WARNING (SECURITY tag) | 10 MB | 365 days |
+The camera monitoring module captures video frames and sends them to the AI detection engine.
 
-**Security audit events logged automatically:**
-- `LOGIN_SUCCESS` / `LOGIN_FAILED` — every authentication attempt with client IP
-- `TOKEN_REFRESH_FAILED` — invalid or expired refresh token usage
-- `AUTH_FAILURE` — any 401/403 HTTP response (via request middleware)
+The system supports:
 
-**Live log streaming:**
-```bash
-# Tail the current application log
-Get-Content backend\logs\firevision_$(Get-Date -Format 'yyyy-MM-dd').log -Wait
+- Live CCTV camera monitoring.
+- Multiple camera configuration.
+- Continuous frame processing.
+- Fire and smoke detection.
+- Detection alert generation.
+- Alert status management.
 
-# Docker
-docker compose logs -f web
-```
+A separate multiprocessing pipeline handles camera frame capture to reduce blocking of the desktop application's interface.
 
----
+## 8. Geographical Map Integration
 
-## Security
+FireVision Pro integrates Leaflet to display camera locations and detected fire incidents on an interactive map.
 
-| Control | Implementation |
+The map module provides:
+
+- Visualization of registered CCTV camera locations.
+- Display of fire detection locations.
+- Geographical identification of affected areas.
+- Easy monitoring of incidents across different locations.
+
+## 9. API Modules
+
+The FastAPI backend provides REST APIs for communication between the desktop application and the database.
+
+| Module | Functionality |
 |---|---|
-| Authentication | JWT Bearer tokens (access + refresh rotation) |
-| Password storage | bcrypt via passlib |
-| CORS | Whitelist-only via `CORS_ORIGINS` env var |
-| Rate limiting | slowapi — configurable via `RATE_LIMIT_LIMIT` |
-| HTTP security headers | `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Content-Security-Policy` |
-| Role-based access | `admin` role required for destructive operations |
-| Secret management | All secrets via `.env` — never hardcoded |
-| Audit logging | Dedicated security audit log with 365-day retention |
+| Authentication | User login and token management |
+| User Management | User registration and profile management |
+| Camera Management | Camera registration and configuration |
+| Alert Management | Fire alert creation and status updates |
+
+### Main API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/token` | User login |
+| POST | `/api/auth/refresh` | Refresh authentication token |
+| POST | `/api/users/` | Register user |
+| GET | `/api/users/me` | Get current user |
+| GET | `/api/cameras/` | Retrieve cameras |
+| POST | `/api/cameras/` | Register camera |
+| GET | `/api/alerts/` | Retrieve alerts |
+| POST | `/api/alerts/` | Create fire alert |
+| PATCH | `/api/alerts/{id}` | Update alert status |
+| GET | `/health` | Check backend status |
+
+## 10. Expected Output
+
+The FireVision Pro application provides the following outputs:
+
+- Real-time CCTV video monitoring.
+- Fire and smoke detection results.
+- Visual identification of detected objects.
+- Fire incident alerts.
+- Camera location visualization.
+- Centralized alert and camera management.
+
+## 11. Future Enhancements
+
+- Integration with additional CCTV camera networks.
+- Improved detection accuracy under different lighting conditions.
+- SMS, email, and mobile notifications.
+- Fire severity classification.
+- Historical fire incident analytics.
+- Automated emergency response integration.
+
+## 12. Conclusion
+
+FireVision Pro combines computer vision, deep learning, desktop application development, and backend technologies to create an integrated fire and smoke detection platform. By combining real-time CCTV monitoring, AI-based detection, centralized alert management, and geographical visualization, the system aims to support faster identification and monitoring of potential fire incidents.
 
 ---
 
-## CI/CD
-
-GitHub Actions pipeline (`.github/workflows/ci.yml`) runs automatically on every push/PR to `main`:
-
-| Step | Tool |
-|---|---|
-| Linting | `flake8` |
-| Type checking | `mypy` |
-| Unit tests | `pytest` |
-| Docker build validation | `docker build` |
-
----
-
-## Contributing
-
-1. Fork the repository and create a feature branch: `git checkout -b feature/your-feature`
-2. Make your changes and add tests where applicable
-3. Run the linter: `flake8 backend/`
-4. Submit a pull request — CI must pass before merge
-
----
-
-*FireVision Pro — Built for rapid, reliable fire detection at scale.*
+**FireVision Pro – AI-Powered Real-Time Fire and Smoke Detection System.**
